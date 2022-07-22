@@ -118,10 +118,8 @@ private:
 	std::vector<VkImageView> m_ViewportImageViews;
 	VkRenderPass m_ViewportRenderPass;
 	VkPipeline m_ViewportPipeline;
-
-	VkImage depthImage;
-	VkDeviceMemory depthImageMemory;
-	VkImageView depthImageView;
+	VkCommandPool m_ViewportCommandPool;
+	std::vector<VkCommandBuffer> m_ViewportCommandBuffers;
 
 	std::vector<VkDescriptorSet> m_Dset;
 
@@ -163,12 +161,12 @@ private:
 		createFramebuffers();
 
 		createCommandPool(&commandPool);
+
+		createCommandPool(&m_ViewportCommandPool);
 		createViewportImage();
 		createViewportImageViews();
 
 		createTextureSampler();
-
-		createDepthResources();
 
 		createViewportFrameBuffers();
 		createCommandBuffers();
@@ -210,28 +208,21 @@ private:
 		vkBindImageMemory(device, image, imageMemory, 0);
 	}
 
-	void createDepthResources() {
-		VkFormat depthFormat = findDepthFormat();
-
-		createImage(swapChainExtent.width, swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
-		depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-	}
-
 	void createViewportFrameBuffers()
 	{
 		m_ViewportFramebuffers.resize(m_ViewportImageViews.size());
 
 		for (size_t i = 0; i < m_ViewportImageViews.size(); i++)
 		{
-			std::array<VkImageView, 2> attachments = {
-					m_ViewportImageViews[i],
-					depthImageView };
+			VkImageView attachments[] = {
+					m_ViewportImageViews[i]
+			};
 
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			framebufferInfo.renderPass = m_ViewportRenderPass;
-			framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-			framebufferInfo.pAttachments = attachments.data();
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
 			framebufferInfo.width = swapChainExtent.width;
 			framebufferInfo.height = swapChainExtent.height;
 			framebufferInfo.layers = 1;
@@ -314,7 +305,7 @@ private:
 			vkAllocateMemory(device, &memAllocInfo, nullptr, &m_DstImageMemory[i]);
 			vkBindImageMemory(device, m_ViewportImages[i], m_DstImageMemory[i], 0);
 
-			VkCommandBuffer copyCmd = beginSingleTimeCommands(commandPool);
+			VkCommandBuffer copyCmd = beginSingleTimeCommands(m_ViewportCommandPool);
 
 			insertImageMemoryBarrier(
 				copyCmd,
@@ -327,7 +318,7 @@ private:
 				VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
-			endSingleTimeCommands(copyCmd, commandPool);
+			endSingleTimeCommands(copyCmd, m_ViewportCommandPool);
 		}
 	}
 
@@ -1005,47 +996,76 @@ private:
 		}
 
 		{
+			std::array<VkAttachmentDescription, 1> attachments = {};
+			// Color attachment
+			attachments[0].format = swapChainImageFormat;
+			attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+			attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			//// Depth attachment
+			//attachments[1].format = findDepthFormat();
+			//attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+			//attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			//attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			//attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			//attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			//attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			//attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+			VkAttachmentReference colorReference = {};
+			colorReference.attachment = 0;
+			colorReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			//VkAttachmentReference depthReference = {};
+			//depthReference.attachment = 1;
+			//depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+			VkSubpassDescription subpassDescription = {};
+			subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpassDescription.colorAttachmentCount = 1;
+			subpassDescription.pColorAttachments = &colorReference;
+			//subpassDescription.pDepthStencilAttachment = &depthReference;
+			subpassDescription.inputAttachmentCount = 0;
+			subpassDescription.pInputAttachments = nullptr;
+			subpassDescription.preserveAttachmentCount = 0;
+			subpassDescription.pPreserveAttachments = nullptr;
+			subpassDescription.pResolveAttachments = nullptr;
+
+			// Subpass dependencies for layout transitions
+			std::array<VkSubpassDependency, 1> dependencies;
+
+			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[0].dstSubpass = 0;
+			dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+			//dependencies[1].srcSubpass = 0;
+			//dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+			//dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			//dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			//dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			//dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			//dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+			VkRenderPassCreateInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+			renderPassInfo.pAttachments = attachments.data();
+			renderPassInfo.subpassCount = 1;
+			renderPassInfo.pSubpasses = &subpassDescription;
+			renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+			renderPassInfo.pDependencies = dependencies.data();
+
+			if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_ViewportRenderPass) != VK_SUCCESS)
 			{
-				VkAttachmentDescription colorAttachment{};
-				colorAttachment.format = swapChainImageFormat;
-				colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-				colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-				VkAttachmentReference colorAttachmentRef{};
-				colorAttachmentRef.attachment = 0;
-				colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-				VkSubpassDescription subpass{};
-				subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpass.colorAttachmentCount = 1;
-				subpass.pColorAttachments = &colorAttachmentRef;
-
-				VkSubpassDependency dependency{};
-				dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependency.dstSubpass = 0;
-				dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependency.srcAccessMask = 0;
-				dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-				VkRenderPassCreateInfo renderPassInfo{};
-				renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-				renderPassInfo.attachmentCount = 1;
-				renderPassInfo.pAttachments = &colorAttachment;
-				renderPassInfo.subpassCount = 1;
-				renderPassInfo.pSubpasses = &subpass;
-				renderPassInfo.dependencyCount = 1;
-				renderPassInfo.pDependencies = &dependency;
-
-				if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_ViewportRenderPass) != VK_SUCCESS)
-				{
-					throw std::runtime_error("failed to create render pass!");
-				}
+				throw std::runtime_error("failed to create render pass!");
 			}
 		}
 	}
@@ -1203,6 +1223,9 @@ private:
 	void createCommandBuffers() {
 		commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
+
+		m_ViewportCommandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.commandPool = commandPool;
@@ -1210,6 +1233,13 @@ private:
 		allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
 		if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate command buffers!");
+		}
+
+		allocInfo.commandPool = m_ViewportCommandPool;
+		allocInfo.commandBufferCount = (uint32_t)m_ViewportCommandBuffers.size();
+		if (vkAllocateCommandBuffers(device, &allocInfo, m_ViewportCommandBuffers.data()) != VK_SUCCESS)
+		{
 			throw std::runtime_error("failed to allocate command buffers!");
 		}
 	}
@@ -1301,15 +1331,15 @@ private:
 		recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
 		{
-			//VkCommandBufferBeginInfo beginInfo{};
-			//beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			//// beginInfo.flags = 0;									// Optional
-			//// beginInfo.pInheritanceInfo = nullptr; // Optional
+			VkCommandBufferBeginInfo beginInfo{};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			// beginInfo.flags = 0;									// Optional
+			// beginInfo.pInheritanceInfo = nullptr; // Optional
 
-			//if (vkBeginCommandBuffer(m_ViewportCommandBuffers[currentFrame], &beginInfo) != VK_SUCCESS)
-			//{
-			//	throw std::runtime_error("failed to begin recording command buffer!");
-			//}
+			if (vkBeginCommandBuffer(m_ViewportCommandBuffers[currentFrame], &beginInfo) != VK_SUCCESS)
+			{
+				throw std::runtime_error("failed to begin recording command buffer!");
+			}
 
 			VkRenderPassBeginInfo renderPassInfo{};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1325,18 +1355,32 @@ private:
 			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			renderPassInfo.pClearValues = clearValues.data();
 
-			vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBeginRenderPass(m_ViewportCommandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, m_ViewportPipeline);
+			vkCmdBindPipeline(m_ViewportCommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, m_ViewportPipeline);
 
-			vkCmdDraw(commandBuffers[currentFrame], 3, 1, 0, 0);
+			VkViewport viewport{};
+			viewport.x = 0.0f;
+			viewport.y = 0.0f;
+			viewport.width = (float)swapChainExtent.width;
+			viewport.height = (float)swapChainExtent.height;
+			viewport.minDepth = 0.0f;
+			viewport.maxDepth = 1.0f;
+			vkCmdSetViewport(m_ViewportCommandBuffers[currentFrame], 0, 1, &viewport);
 
-			vkCmdEndRenderPass(commandBuffers[currentFrame]);
+			VkRect2D scissor{};
+			scissor.offset = { 0, 0 };
+			scissor.extent = swapChainExtent;
+			vkCmdSetScissor(m_ViewportCommandBuffers[currentFrame], 0, 1, &scissor);
 
-			/*if (vkEndCommandBuffer(commandBuffers[currentFrame]) != VK_SUCCESS)
+			vkCmdDraw(m_ViewportCommandBuffers[currentFrame], 3, 1, 0, 0);
+
+			vkCmdEndRenderPass(m_ViewportCommandBuffers[currentFrame]);
+
+			if (vkEndCommandBuffer(m_ViewportCommandBuffers[currentFrame]) != VK_SUCCESS)
 			{
 				throw std::runtime_error("failed to record command buffer!");
-			}*/
+			}
 		}
 
 		{
@@ -1366,9 +1410,9 @@ private:
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
-
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
+		std::array<VkCommandBuffer, 2> submitCommandBuffers = { commandBuffers[currentFrame] ,m_ViewportCommandBuffers[currentFrame] };
+		submitInfo.commandBufferCount = static_cast<uint32_t>(submitCommandBuffers.size());
+		submitInfo.pCommandBuffers = submitCommandBuffers.data();
 
 		VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
 		submitInfo.signalSemaphoreCount = 1;

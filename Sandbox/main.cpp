@@ -216,9 +216,9 @@ private:
 	std::vector<VkImageView> m_ViewportImageViews;
 	VkRenderPass m_ViewportRenderPass;
 	VkPipeline m_ViewportPipeline;
-	VkCommandPool m_ViewportCommandPool;
+	//VkCommandPool m_ViewportCommandPool;
 	std::vector<VkFramebuffer> m_ViewportFramebuffers;
-	std::vector<VkCommandBuffer> m_ViewportCommandBuffers;
+	//std::vector<VkCommandBuffer> m_ViewportCommandBuffers;
 
 	uint32_t currentFrame = 0;
 	uint32_t m_ImageCount = 2;
@@ -256,7 +256,7 @@ private:
 		createCommandPool(&commandPool);
 
 		//创建ViewPort相关数据
-		createCommandPool(&m_ViewportCommandPool);
+		//createCommandPool(&m_ViewportCommandPool);
 		createViewportImage();
 		createViewportImageViews();
 
@@ -516,7 +516,7 @@ private:
 		}
 
 		vkDestroyCommandPool(device, commandPool, nullptr);
-		vkDestroyCommandPool(device, m_ViewportCommandPool, nullptr);
+		vkDestroyCommandPool(device, commandPool, nullptr);
 		vkDestroyRenderPass(device, m_ImGuiRenderPass, nullptr);
 
 		cleanupSwapChain();
@@ -1290,7 +1290,7 @@ private:
 			vkAllocateMemory(device, &memAllocInfo, nullptr, &m_DstImageMemory[i]);
 			vkBindImageMemory(device, m_ViewportImages[i], m_DstImageMemory[i], 0);
 
-			VkCommandBuffer copyCmd = beginSingleTimeCommands(m_ViewportCommandPool);
+			VkCommandBuffer copyCmd = beginSingleTimeCommands(commandPool);
 
 			insertImageMemoryBarrier(
 				copyCmd,
@@ -1303,7 +1303,7 @@ private:
 				VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
-			endSingleTimeCommands(copyCmd, m_ViewportCommandPool);
+			endSingleTimeCommands(copyCmd, commandPool);
 		}
 	}
 
@@ -1458,7 +1458,7 @@ private:
 	}
 
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
-		VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_ViewportCommandPool);
+		VkCommandBuffer commandBuffer = beginSingleTimeCommands(commandPool);
 
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1503,11 +1503,11 @@ private:
 			1, &barrier
 		);
 
-		endSingleTimeCommands(commandBuffer, m_ViewportCommandPool);
+		endSingleTimeCommands(commandBuffer, commandPool);
 	}
 
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-		VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_ViewportCommandPool);
+		VkCommandBuffer commandBuffer = beginSingleTimeCommands(commandPool);
 
 		VkBufferImageCopy region{};
 		region.bufferOffset = 0;
@@ -1526,7 +1526,7 @@ private:
 
 		vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-		endSingleTimeCommands(commandBuffer, m_ViewportCommandPool);
+		endSingleTimeCommands(commandBuffer, commandPool);
 	}
 
 	void createVertexBuffer() {
@@ -1704,13 +1704,13 @@ private:
 	}
 
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-		VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_ViewportCommandPool);
+		VkCommandBuffer commandBuffer = beginSingleTimeCommands(commandPool);
 
 		VkBufferCopy copyRegion{};
 		copyRegion.size = size;
 		vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-		endSingleTimeCommands(commandBuffer, m_ViewportCommandPool);
+		endSingleTimeCommands(commandBuffer, commandPool);
 	}
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -1728,7 +1728,7 @@ private:
 
 	void createCommandBuffers() {
 		commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-		m_ViewportCommandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+		//m_ViewportCommandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1740,12 +1740,12 @@ private:
 			throw std::runtime_error("failed to allocate command buffers!");
 		}
 
-		allocInfo.commandPool = m_ViewportCommandPool;
-		allocInfo.commandBufferCount = (uint32_t)m_ViewportCommandBuffers.size();
-		if (vkAllocateCommandBuffers(device, &allocInfo, m_ViewportCommandBuffers.data()) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to allocate command buffers!");
-		}
+		/*	allocInfo.commandPool = commandPool;
+			allocInfo.commandBufferCount = (uint32_t)m_ViewportCommandBuffers.size();
+			if (vkAllocateCommandBuffers(device, &allocInfo, m_ViewportCommandBuffers.data()) != VK_SUCCESS)
+			{
+				throw std::runtime_error("failed to allocate command buffers!");
+			}*/
 	}
 
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, const VkDescriptorSet& descriptorSet) {
@@ -1866,15 +1866,15 @@ private:
 		recordCommandBuffer(commandBuffers[currentFrame], imageIndex, descriptorSets[currentFrame]);
 
 		{
-			VkCommandBufferBeginInfo beginInfo{};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			// beginInfo.flags = 0;									// Optional
-			// beginInfo.pInheritanceInfo = nullptr; // Optional
+			//VkCommandBufferBeginInfo beginInfo{};
+			//beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			//// beginInfo.flags = 0;									// Optional
+			//// beginInfo.pInheritanceInfo = nullptr; // Optional
 
-			if (vkBeginCommandBuffer(m_ViewportCommandBuffers[currentFrame], &beginInfo) != VK_SUCCESS)
-			{
-				throw std::runtime_error("failed to begin recording command buffer!");
-			}
+			//if (vkBeginCommandBuffer(commandBuffers[currentFrame], &beginInfo) != VK_SUCCESS)
+			//{
+			//	throw std::runtime_error("failed to begin recording command buffer!");
+			//}
 
 			VkRenderPassBeginInfo renderPassInfo{};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1890,25 +1890,25 @@ private:
 			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			renderPassInfo.pClearValues = clearValues.data();
 
-			vkCmdBeginRenderPass(m_ViewportCommandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdBindPipeline(m_ViewportCommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, m_ViewportPipeline);
+			vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, m_ViewportPipeline);
 
 			VkBuffer vertexBuffers[] = { vertexBuffer };
 			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindVertexBuffers(m_ViewportCommandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
+			vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
 
-			vkCmdBindIndexBuffer(m_ViewportCommandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-			vkCmdBindDescriptorSets(m_ViewportCommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+			vkCmdBindIndexBuffer(commandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+			vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
-			vkCmdDrawIndexed(m_ViewportCommandBuffers[currentFrame], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+			vkCmdDrawIndexed(commandBuffers[currentFrame], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
-			vkCmdEndRenderPass(m_ViewportCommandBuffers[currentFrame]);
+			vkCmdEndRenderPass(commandBuffers[currentFrame]);
 
-			if (vkEndCommandBuffer(m_ViewportCommandBuffers[currentFrame]) != VK_SUCCESS)
-			{
-				throw std::runtime_error("failed to record command buffer!");
-			}
+			//if (vkEndCommandBuffer(m_ViewportCommandBuffers[currentFrame]) != VK_SUCCESS)
+			//{
+			//	throw std::runtime_error("failed to record command buffer!");
+			//}
 		}
 
 		{
