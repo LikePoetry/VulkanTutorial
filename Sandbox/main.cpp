@@ -132,9 +132,9 @@ private:
 	// for ImGui
 	VkRenderPass m_ImGuiRenderPass;
 	std::vector<VkFramebuffer> m_ImGuiFramebuffers;
-	VkCommandPool m_ImGuiCommandPool;
+	/*VkCommandPool m_ImGuiCommandPool;*/
 	VkDescriptorPool m_ImGuiDescriptorPool;
-	std::vector<VkCommandBuffer> m_ImGuiCommandBuffers;
+	/*std::vector<VkCommandBuffer> m_ImGuiCommandBuffers;*/
 
 	uint32_t m_ImageCount = 2;
 
@@ -385,10 +385,10 @@ private:
 		}
 
 		createImGuiDescriptorPool();
-		createCommandPool(&m_ImGuiCommandPool);
+		//createCommandPool(&m_ImGuiCommandPool);
 		createImGuiRenderPass();
 
-		createImGuiCommandBuffers();
+		/*createImGuiCommandBuffers();*/
 		createImGuiFramebuffers();
 
 		ImGui_ImplGlfw_InitForVulkan(window, true);
@@ -411,9 +411,9 @@ private:
 
 		// Upload Fonts
 		{
-			VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_ImGuiCommandPool);
+			VkCommandBuffer commandBuffer = beginSingleTimeCommands(commandPool);
 			ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-			endSingleTimeCommands(commandBuffer, m_ImGuiCommandPool);
+			endSingleTimeCommands(commandBuffer, commandPool);
 			ImGui_ImplVulkan_DestroyFontUploadObjects();
 		}
 
@@ -524,13 +524,13 @@ private:
 			throw std::runtime_error("failed to create render pass!");
 	}
 
-	void createImGuiCommandBuffers()
+	/*void createImGuiCommandBuffers()
 	{
 		m_ImGuiCommandBuffers.resize(swapChainImageViews.size());
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = m_ImGuiCommandPool;
+		allocInfo.commandPool = commandPool;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocInfo.commandBufferCount = (uint32_t)m_ImGuiCommandBuffers.size();
 
@@ -538,7 +538,7 @@ private:
 		{
 			throw std::runtime_error("failed to allocate command buffers!");
 		}
-	}
+	}*/
 
 	void createImGuiFramebuffers()
 	{
@@ -1196,9 +1196,9 @@ private:
 
 		vkCmdEndRenderPass(commandBuffer);
 
-		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+		/*if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer!");
-		}
+		}*/
 	}
 
 	void createSyncObjects() {
@@ -1243,10 +1243,10 @@ private:
 
 		{
 			// vkResetCommandPool(m_Device, m_ImGuiCommandPool, 0);
-			VkCommandBufferBeginInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			vkBeginCommandBuffer(m_ImGuiCommandBuffers[currentFrame], &info);
+			//VkCommandBufferBeginInfo info = {};
+			//info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			//info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			//vkBeginCommandBuffer(commandBuffers[currentFrame], &info);
 
 			VkRenderPassBeginInfo renderPassInfo = {};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1257,13 +1257,13 @@ private:
 			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 			renderPassInfo.clearValueCount = 1;
 			renderPassInfo.pClearValues = &clearColor;
-			vkCmdBeginRenderPass(m_ImGuiCommandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			// Record dear imgui primitives into command buffer
-			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_ImGuiCommandBuffers[currentFrame]);
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
 
-			vkCmdEndRenderPass(m_ImGuiCommandBuffers[currentFrame]);
-			vkEndCommandBuffer(m_ImGuiCommandBuffers[currentFrame]);
+			vkCmdEndRenderPass(commandBuffers[currentFrame]);
+			vkEndCommandBuffer(commandBuffers[currentFrame]);
 		}
 
 
@@ -1328,8 +1328,8 @@ private:
 
 		VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
 
-		std::array<VkCommandBuffer, 3> submitCommandBuffers =
-		{ commandBuffers[currentFrame], m_ImGuiCommandBuffers[currentFrame] ,m_ViewportCommandBuffers[currentFrame] };
+		std::array<VkCommandBuffer, 2> submitCommandBuffers =
+		{ commandBuffers[currentFrame], m_ViewportCommandBuffers[currentFrame] };
 
 		//std::array<VkCommandBuffer, 1> submitCommandBuffers = { commandBuffers[currentFrame] };
 
