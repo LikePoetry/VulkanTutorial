@@ -111,7 +111,7 @@ private:
 	VkDescriptorPool m_ImGuiDescriptorPool;
 	//std::vector<VkCommandBuffer> m_ImGuiCommandBuffers;
 
-		// for viewport
+	// for viewport
 	std::vector<VkImage> m_ViewportImages;
 	std::vector<VkDeviceMemory> m_DstImageMemory;
 	std::vector<VkFramebuffer> m_ViewportFramebuffers;
@@ -120,9 +120,7 @@ private:
 	VkPipeline m_ViewportPipeline;
 	VkCommandPool m_ViewportCommandPool;
 	std::vector<VkCommandBuffer> m_ViewportCommandBuffers;
-
 	std::vector<VkDescriptorSet> m_Dset;
-
 	// ÎÆÀí²ÉÑùÆ÷
 	VkSampler textureSampler;
 
