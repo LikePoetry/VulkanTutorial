@@ -112,8 +112,8 @@ private:
 
 	std::vector<VkFramebuffer> m_ViewportFramebuffers;
 
-	VkRenderPass m_ViewportRenderPass;
-	VkPipeline m_ViewportPipeline;
+	//VkRenderPass m_ViewportRenderPass;
+	//VkPipeline m_ViewportPipeline;
 	VkCommandPool m_ViewportCommandPool;
 
 	std::vector<VkCommandBuffer> m_ViewportCommandBuffers;
@@ -189,7 +189,7 @@ private:
 
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass = m_ViewportRenderPass;
+			framebufferInfo.renderPass = renderPass;
 			framebufferInfo.attachmentCount = 1;
 			framebufferInfo.pAttachments = attachments;
 			framebufferInfo.width = swapChainExtent.width;
@@ -909,7 +909,7 @@ private:
 			}
 		}
 
-		{
+		/*{
 			VkAttachmentDescription colorAttachment{};
 			colorAttachment.format = swapChainImageFormat;
 			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -950,7 +950,7 @@ private:
 			{
 				throw std::runtime_error("failed to create render pass!");
 			}
-		}
+		}*/
 	}
 
 	VkFormat findDepthFormat()
@@ -1086,11 +1086,11 @@ private:
 		}
 
 
-		pipelineInfo.renderPass = m_ViewportRenderPass;
+		/*pipelineInfo.renderPass = renderPass;
 		if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_ViewportPipeline) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create graphics pipeline!");
-		}
+		}*/
 
 		vkDestroyShaderModule(device, fragShaderModule, nullptr);
 		vkDestroyShaderModule(device, vertShaderModule, nullptr);
@@ -1280,7 +1280,7 @@ private:
 
 			VkRenderPassBeginInfo renderPassInfo{};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = m_ViewportRenderPass;
+			renderPassInfo.renderPass = renderPass;
 			renderPassInfo.framebuffer = m_ViewportFramebuffers[imageIndex];
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = swapChainExtent;
@@ -1294,7 +1294,7 @@ private:
 
 			vkCmdBeginRenderPass(m_ViewportCommandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdBindPipeline(m_ViewportCommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, m_ViewportPipeline);
+			vkCmdBindPipeline(m_ViewportCommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
 			VkViewport viewport{};
 			viewport.x = 0.0f;
