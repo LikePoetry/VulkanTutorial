@@ -550,7 +550,6 @@ private:
 
 		VkGraphicsPipelineCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		info.flags = VK_NULL_HANDLE;
 		info.stageCount = 2;
 		info.pStages = stage;
 		info.pVertexInputState = &vertex_info;
