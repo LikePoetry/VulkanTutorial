@@ -2,8 +2,8 @@
 // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
-//  [x] Platform: Multi-viewport / platform windows. With issues (flickering when creating a new viewport).
+//  [X] Renderer: Large meshes support (64k+ vertices) with 16-bit indices.
+//  [x] Renderer: Multi-viewport / platform windows. With issues (flickering when creating a new viewport).
 //  [!] Renderer: User texture binding. Use 'VkDescriptorSet' as ImTextureID. Read the FAQ about ImTextureID! See https://github.com/ocornut/imgui/pull/914 for discussions.
 
 // Important: on 32-bit systems, user texture binding is only supported if your imconfig file has '#define ImTextureID ImU64'.
@@ -60,7 +60,7 @@ struct ImGui_ImplVulkan_InitInfo
     uint32_t                        MinImageCount;          // >= 2
     uint32_t                        ImageCount;             // >= MinImageCount
     VkSampleCountFlagBits           MSAASamples;            // >= VK_SAMPLE_COUNT_1_BIT (0 -> default to VK_SAMPLE_COUNT_1_BIT)
-    const VkAllocationCallbacks* Allocator;
+    const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
 };
 
@@ -143,13 +143,13 @@ struct ImGui_ImplVulkanH_Window
     uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
     uint32_t            ImageCount;             // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
     uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
-    ImGui_ImplVulkanH_Frame* Frames;
-    ImGui_ImplVulkanH_FrameSemaphores* FrameSemaphores;
+    ImGui_ImplVulkanH_Frame*            Frames;
+    ImGui_ImplVulkanH_FrameSemaphores*  FrameSemaphores;
 
     ImGui_ImplVulkanH_Window()
     {
-        memset(this, 0, sizeof(*this));
-        PresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+        memset((void*)this, 0, sizeof(*this));
+        PresentMode = (VkPresentModeKHR)~0;     // Ensure we get an error if user doesn't set this.
         ClearEnable = true;
     }
 };
