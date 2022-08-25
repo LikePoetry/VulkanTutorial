@@ -265,8 +265,8 @@ private:
 	//For Imgui
 	VkDescriptorPool m_ImGuiDescriptorPool;
 	VkRenderPass m_ImGuiRenderPass;
-	VkCommandPool m_ImGuiCommandPool;
-	std::vector<VkCommandBuffer> m_ImGuiCommandBuffers;
+	//VkCommandPool m_ImGuiCommandPool;
+	//std::vector<VkCommandBuffer> m_ImGuiCommandBuffers;
 	std::vector<VkFramebuffer> m_ImGuiFramebuffers;
 	QueueFamilyIndices m_indices;
 	uint32_t m_ImageCount = 2;
@@ -360,15 +360,15 @@ private:
 			createImGuiRenderPass();
 		}
 
-		// Create CommandPool for m_ImGuiCommandPool
-		{
-			createCommandPool(&m_ImGuiCommandPool);
-		}
+		//// Create CommandPool for m_ImGuiCommandPool
+		//{
+		//	createCommandPool(&m_ImGuiCommandPool);
+		//}
 
-		// Create CommandBuffers for m_ImGuiCommandBuffers
-		{
-			createImGuiCommandBuffers();
-		}
+		//// Create CommandBuffers for m_ImGuiCommandBuffers
+		//{
+		//	createImGuiCommandBuffers();
+		//}
 
 		{
 			createImGuiFramebuffers();
@@ -398,9 +398,9 @@ private:
 
 		// Upload Fonts
 		{
-			VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_ImGuiCommandPool);
+			VkCommandBuffer commandBuffer = beginSingleTimeCommands(commandPool);
 			ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-			endSingleTimeCommands(commandBuffer, m_ImGuiCommandPool);
+			endSingleTimeCommands(commandBuffer, commandPool);
 			ImGui_ImplVulkan_DestroyFontUploadObjects();
 		}
 	}
@@ -644,7 +644,7 @@ private:
 			throw std::runtime_error("failed to create render pass!");
 	}
 
-	void createImGuiCommandBuffers()
+	/*void createImGuiCommandBuffers()
 	{
 		m_ImGuiCommandBuffers.resize(swapChainImageViews.size());
 
@@ -658,7 +658,7 @@ private:
 		{
 			throw std::runtime_error("failed to allocate command buffers!");
 		}
-	}
+	}*/
 
 	void createImGuiFramebuffers()
 	{
@@ -1445,9 +1445,9 @@ private:
 
 		vkCmdEndRenderPass(commandBuffer);
 
-		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+		/*if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer!");
-		}
+		}*/
 
 	}
 
@@ -1512,11 +1512,11 @@ private:
 		recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
 		{
-			// vkResetCommandPool(m_Device, m_ImGuiCommandPool, 0);
-			VkCommandBufferBeginInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			vkBeginCommandBuffer(m_ImGuiCommandBuffers[currentFrame], &info);
+			//// vkResetCommandPool(m_Device, m_ImGuiCommandPool, 0);
+			//VkCommandBufferBeginInfo info = {};
+			//info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			//info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			//vkBeginCommandBuffer(commandBuffers[currentFrame], &info);
 
 			VkRenderPassBeginInfo renderPassInfo = {};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1527,17 +1527,17 @@ private:
 			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 			renderPassInfo.clearValueCount = 1;
 			renderPassInfo.pClearValues = &clearColor;
-			vkCmdBeginRenderPass(m_ImGuiCommandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			// Record dear imgui primitives into command buffer
-			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_ImGuiCommandBuffers[currentFrame]);
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffers[currentFrame]);
 
-			vkCmdEndRenderPass(m_ImGuiCommandBuffers[currentFrame]);
-			vkEndCommandBuffer(m_ImGuiCommandBuffers[currentFrame]);
+			vkCmdEndRenderPass(commandBuffers[currentFrame]);
+			vkEndCommandBuffer(commandBuffers[currentFrame]);
 		}
 
-		std::array<VkCommandBuffer, 2> submitCommandBuffers =
-		{ commandBuffers[currentFrame],  m_ImGuiCommandBuffers[currentFrame] };
+		std::array<VkCommandBuffer, 1> submitCommandBuffers =
+		{ commandBuffers[currentFrame] };
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
