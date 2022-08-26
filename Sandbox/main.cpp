@@ -195,8 +195,8 @@ private:
 	std::vector<VkImage> m_ViewportImages;
 	std::vector<VkDeviceMemory> m_DstImageMemory;
 	std::vector<VkImageView> m_ViewportImageViews;
-	VkRenderPass m_ViewportRenderPass;
-	VkPipeline m_ViewportPipeline;
+	//VkRenderPass m_ViewportRenderPass;
+	//VkPipeline m_ViewportPipeline;
 	std::vector<VkFramebuffer> m_ViewportFramebuffers;
 	std::vector<VkDescriptorSet> m_Dset;
 	VkSampler m_TextureSampler;
@@ -235,7 +235,7 @@ private:
 		createSwapChain();
 		createImageViews();
 		createRenderPass();
-		createViewportRenderPass();
+		/*createViewportRenderPass();*/
 		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createFramebuffers();
@@ -904,7 +904,7 @@ private:
 		createInfo.imageColorSpace = surfaceFormat.colorSpace;
 		createInfo.imageExtent = extent;
 		createInfo.imageArrayLayers = 1;
-		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT| VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
 
 		QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -969,7 +969,7 @@ private:
 		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 		VkAttachmentReference colorAttachmentRef{};
 		colorAttachmentRef.attachment = 0;
@@ -1030,7 +1030,7 @@ private:
 		throw std::runtime_error("failed to find supported format!");
 	}
 
-	void createViewportRenderPass()
+	/*void createViewportRenderPass()
 	{
 
 		VkAttachmentDescription colorAttachment{};
@@ -1071,7 +1071,7 @@ private:
 
 		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_ViewportRenderPass) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create render pass!");
-		}
+		}*/
 
 		//std::array<VkAttachmentDescription, 1> attachments = {};
 		//// Color attachment
@@ -1144,7 +1144,7 @@ private:
 		//{
 		//	throw std::runtime_error("failed to create render pass!");
 		//}
-	}
+	/*}*/
 
 	void createDescriptorSetLayout() {
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -1274,11 +1274,11 @@ private:
 			throw std::runtime_error("failed to create graphics pipeline!");
 		}
 
-		pipelineInfo.renderPass = m_ViewportRenderPass;
+		/*pipelineInfo.renderPass = m_ViewportRenderPass;
 		if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_ViewportPipeline) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create graphics pipeline!");
-		}
+		}*/
 
 		vkDestroyShaderModule(device, fragShaderModule, nullptr);
 		vkDestroyShaderModule(device, vertShaderModule, nullptr);
@@ -1580,7 +1580,7 @@ private:
 		}
 
 		
-		{
+		/*{
 			VkRenderPassBeginInfo renderPassInfo{};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			renderPassInfo.renderPass = renderPass;
@@ -1630,8 +1630,8 @@ private:
 
 			vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(tindices.size()), 1, 0, 0, 0);
 
-			vkCmdEndRenderPass(commandBuffer);
-		}
+			vkCmdEndRenderPass(commandBuffer);*/
+		/*}*/
 		
 		/*if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer!");
@@ -1701,7 +1701,7 @@ private:
 		{
 			VkRenderPassBeginInfo renderPassInfo{};
 			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = m_ViewportRenderPass;
+			renderPassInfo.renderPass = renderPass;
 			renderPassInfo.framebuffer = m_ViewportFramebuffers[imageIndex];
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = swapChainExtent;
@@ -1713,7 +1713,7 @@ private:
 
 			vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, m_ViewportPipeline);
+			vkCmdBindPipeline(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
 			VkViewport viewport{};
 			viewport.x = 0.0f;
@@ -1738,6 +1738,16 @@ private:
 			vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
 			vkCmdDrawIndexed(commandBuffers[currentFrame], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+			VkBuffer tvertexBuffers[] = { tvertexBuffer };
+			VkDeviceSize toffsets[] = { 0 };
+			vkCmdBindVertexBuffers(commandBuffers[currentFrame], 0, 1, tvertexBuffers, toffsets);
+
+			vkCmdBindIndexBuffer(commandBuffers[currentFrame], tindexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+			vkCmdBindDescriptorSets(commandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+
+			vkCmdDrawIndexed(commandBuffers[currentFrame], static_cast<uint32_t>(tindices.size()), 1, 0, 0, 0);
 
 			vkCmdEndRenderPass(commandBuffers[currentFrame]);
 		}
