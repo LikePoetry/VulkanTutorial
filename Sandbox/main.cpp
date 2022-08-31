@@ -183,11 +183,11 @@ private:
 			VkAttachmentDescription attachment = {};
 			attachment.format = swapChainImageFormat;
 			attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			VkAttachmentReference color_attachment = {};
 			color_attachment.attachment = 0;
