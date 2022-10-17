@@ -1,12 +1,15 @@
 ﻿#include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
+#include "ImGuizmo.h"
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -176,6 +179,7 @@ private:
 	uint32_t currentFrame = 0;
 
 	bool framebufferResized = false;
+	std::chrono::high_resolution_clock::time_point startTime;
 
 
 
@@ -222,64 +226,11 @@ private:
 	}
 
 	void mainLoop() {
-		// Our state
-		bool show_demo_window = true;
-		bool show_another_window = false;
-		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+		startTime = std::chrono::high_resolution_clock::now();
 
 		while (!glfwWindowShouldClose(window)) {
 			glfwPollEvents();
-
-			// Start the Dear ImGui frame
-			ImGui_ImplVulkan_NewFrame();
-			ImGui_ImplGlfw_NewFrame();
-			ImGui::NewFrame();
-
-			// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-			if (show_demo_window)
-				ImGui::ShowDemoWindow(&show_demo_window);
-
-			// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-			{
-				static float f = 0.0f;
-				static int counter = 0;
-
-				ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-				ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-				ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-				ImGui::Checkbox("Another Window", &show_another_window);
-
-				ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-				ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-				if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-					counter++;
-				ImGui::SameLine();
-				ImGui::Text("counter = %d", counter);
-
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-				ImGui::End();
-			}
-
-			// 3. Show another simple window.
-			if (show_another_window)
-			{
-				ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-				ImGui::Text("Hello from another window!");
-				if (ImGui::Button("Close Me"))
-					show_another_window = false;
-				ImGui::End();
-			}
-
-			ImGui::Render();
-
-			ImGuiIO& io = ImGui::GetIO(); (void)io;
-			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-			{
-				ImGui::UpdatePlatformWindows();
-				ImGui::RenderPlatformWindowsDefault();
-			}
 
 			drawFrame();
 		}
@@ -678,7 +629,7 @@ private:
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizer.cullMode = VK_CULL_MODE_NONE;
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -1057,22 +1008,136 @@ private:
 		}
 	}
 
-	void updateUniformBuffer(uint32_t currentImage) {
-		static auto startTime = std::chrono::high_resolution_clock::now();
+	float translateX = 0.0f;
+	float translateY = 0.0f;
+	float translateZ = 0.0f;
+	float translateProj = 80.0f;
 
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+	float rotateX = 0.0f;
+	float rotateY = 0.0f;
+	float rotateZ = 0.0f;
+
+	float lookEyeX = 0.0f;
+	float lookEyeY = 0.0f;
+	float lookEyeZ = 1.0f;
+
+	float lookUpX = 0.0f;
+	float lookUpY = 1.0f;
+	float lookUpZ = 0.0f;
+
+	void updateUniformBuffer(uint32_t currentImage) {
+		// Our state
+		bool show_demo_window = true;
+		bool show_another_window = true;
+		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+
+
+		// Start the Dear ImGui frame
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		ImGuizmo::BeginFrame();
+
+		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+		if (show_demo_window)
+			ImGui::ShowDemoWindow(&show_demo_window);
+
+		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+		{
+			static float f = 0.0f;
+			static int counter = 0;
+
+			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+			ImGui::Checkbox("Another Window", &show_another_window);
+
+			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+				counter++;
+			ImGui::SameLine();
+			ImGui::Text("counter = %d", counter);
+
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+			ImGui::End();
+		}
+
+		// 3. Show another simple window.
+		if (show_another_window)
+		{
+			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+			ImGui::Text("Hello from another window!");
+			ImGui::InputFloat("X:", &translateX);
+			ImGui::InputFloat("Y:", &translateY);
+			ImGui::InputFloat("Z:", &translateZ);
+
+			ImGui::InputFloat("RotateX:", &rotateX);
+			ImGui::InputFloat("RotateY:", &rotateY);
+			ImGui::InputFloat("RotateZ:", &rotateZ);
+
+
+			ImGui::InputFloat("LookEyeX:", &lookEyeX);
+			ImGui::InputFloat("LookEyeY:", &lookEyeY);
+			ImGui::InputFloat("LookEyeZ:", &lookEyeZ);
+
+			ImGui::InputFloat("LookUpX:", &lookUpX);
+			ImGui::InputFloat("LookUpY:", &lookUpY);
+			ImGui::InputFloat("LookUpZ:", &lookUpZ);
+
+			ImGui::InputFloat("Projection:", &translateProj);
+
+
+			ImGui::End();
+		}
+
+
+		//auto currentTime = std::chrono::high_resolution_clock::now();
+		////float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+		//auto time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count();
+		//startTime = currentTime;
+		//ImGui::Begin("Profile Window");
+		//ImGui::Text("FPS %lld", time);
+		//ImGui::End();
+
+
+
 
 		UniformBufferObject ubo{};
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+		ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(translateX, translateY, translateZ));
+		ubo.model = glm::rotate(ubo.model, glm::radians(rotateZ), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::rotate(ubo.model, glm::radians(rotateY), glm::vec3(0.0f, 1.0f, 0.0f));
+		ubo.model = glm::rotate(ubo.model, glm::radians(rotateX), glm::vec3(1.0f, 0.0f, 0.0f));
+
+		ubo.view = glm::lookAt(glm::vec3(lookEyeX, lookEyeY, lookEyeZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(lookUpX, lookUpY, lookUpZ));
+		ubo.proj = glm::perspective(glm::radians(translateProj), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
 		ubo.proj[1][1] *= -1;
 
 		void* data;
 		vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
 		vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		auto viewportOffset = ImGui::GetWindowPos();
+		//ImGuizmo::SetOrthographic(false);
+		//ImGuizmo::SetDrawlist();
+		ImGuizmo::SetRect(viewportOffset.x, viewportOffset.y, io.DisplaySize.x, io.DisplaySize.y);
+		ImGuizmo::Manipulate(glm::value_ptr(ubo.view), glm::value_ptr(ubo.proj), ImGuizmo::TRANSLATE, ImGuizmo::LOCAL, glm::value_ptr(ubo.model), NULL, NULL);
+
+		ImGui::Render();
+
+
+
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+		}
 	}
 
 	void drawFrame() {

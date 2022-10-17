@@ -17,6 +17,8 @@ IncludeDir["imgui"]="vendor/imgui"
 IncludeDir["glm"] = "vendor/glm"
 IncludeDir["stb"] = "vendor/stb"
 IncludeDir["tinyobjloader"] = "vendor/tinyobjloader"
+IncludeDir["ImGuizmo"] = "vendor/ImGuizmo"
+
 
 group "Dependencies"
 	include "vendor/GLFW"
@@ -40,6 +42,8 @@ project "Sandbox"
 	{
 		"%{prj.name}/**.h",
 		"%{prj.name}/**.cpp",
+		"%{IncludeDir.ImGuizmo}/ImGuizmo.h",
+		"%{IncludeDir.ImGuizmo}/ImGuizmo.cpp",
 	}
 
 	includedirs
@@ -50,7 +54,8 @@ project "Sandbox"
 		"%VULKAN_SDK%/include",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.imgui}",
-		"%{IncludeDir.stb}"
+		"%{IncludeDir.stb}",
+		"%{IncludeDir.ImGuizmo}"
 
 	}
 
@@ -113,7 +118,7 @@ project "SandboxEdit"
 		"%VULKAN_SDK%/include",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.imgui}",
-		"%{IncludeDir.stb}"
+		"%{IncludeDir.stb}",
 
 	}
 
