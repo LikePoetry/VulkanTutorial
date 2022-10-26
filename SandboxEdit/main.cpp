@@ -107,18 +107,15 @@ struct UniformBufferObject {
 };
 
 const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f,0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f,0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{0.5f, 0.5f,0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f,0.5f}, {1.0f, 1.0f, 1.0f}},
-	{{0.5f, -0.5f,-0.5f}, {1.0f, 1.0f, 1.0f}},
-	{{0.5f, 0.5f,-0.5f}, {1.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f,-0.5f}, {1.0f, 1.0f, 0.0f}},
-	{{-0.5f, -0.5f,-0.5f}, {0.0f, 1.0f, 1.0f}}
+	{{-1.0f, -1.0f,0.0f}, {1.0f, 0.0f, 0.0f}},
+	{{1.0f, -1.0f,0.0f}, {0.0f, 1.0f, 0.0f}},
+	{{1.0f, 1.0f,0.0f}, {0.0f, 0.0f, 1.0f}},
+	{{-1.0f, 1.0f,0.0f}, {1.0f, 1.0f, 1.0f}},
+
 };
 
 const std::vector<uint16_t> indices = {
-	0, 1, 2,2,3,0,1,4,2,4,5,2,3,2,6,2,5,6
+	0, 2, 1,0,3,2
 };
 
 bool checkDeviceExtensionSupport(VkPhysicalDevice device);
@@ -736,7 +733,15 @@ void createGraphicsPipeline() {
 
 	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	colorBlendAttachment.blendEnable = VK_FALSE;
+	//ÉèÖÃÍ¸Ã÷¶È×´Ì¬
+	colorBlendAttachment.blendEnable = VK_TRUE;
+	colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+
 
 	VkPipelineColorBlendStateCreateInfo colorBlending{};
 	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
