@@ -14,7 +14,6 @@
     </ClInclude>
     <ClInclude Include="imgui_impl_glfw.h" />
     <ClInclude Include="imgui_impl_vulkan.h" />
-    <ClInclude Include="tiny_obj_loader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\vendor\ImGuizmo\ImGuizmo.cpp">
