@@ -33,3 +33,5 @@
 /.vs
 /bin
 /bin-int
+*.tlog
+*.tlog
